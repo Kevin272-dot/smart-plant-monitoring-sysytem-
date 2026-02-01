@@ -8,6 +8,11 @@ Supports multiple simulation modes and configurable parameters.
 import requests
 import random
 import time
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 import sys
 from datetime import datetime
 from typing import Dict, Any
@@ -18,8 +23,8 @@ from enum import Enum
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════
 
-SUPABASE_URL = "https://yhgyeaygmampbvfanumx.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InloZ3llYXlnbWFtcGJ2ZmFudW14Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzQ1OTc1MCwiZXhwIjoyMDgzMDM1NzUwfQ.76utBDw7G3jkYbTN51cZ7z39DBFYAMcNzpq6ct_YLXM"
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://yhgyeaygmampbvfanumx.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")  # Set via environment variable
 API_ENDPOINT = f"{SUPABASE_URL}/rest/v1/readings"
 
 # Simulation settings
