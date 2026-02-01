@@ -7,6 +7,9 @@ node_modules/
 .env.local
 .env.*.local
 
+# Config files with secrets
+dashboard/config.js
+
 # IDE
 .vscode/
 .idea/

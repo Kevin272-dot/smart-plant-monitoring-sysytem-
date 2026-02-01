@@ -6,6 +6,7 @@
   <title>🌱 Smart Plant Monitoring Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <style>
     /* ═══════════════════════════════════════════════════════════════════
        RESET & BASE STYLES
@@ -696,8 +697,8 @@
     // ═══════════════════════════════════════════════════════════════════
     // OPENWEATHERMAP CONFIG
     // ═══════════════════════════════════════════════════════════════════
-    const WEATHER_API_KEY = "c6eef9b2a2d6de9ee8c5caef5c9b3f38";
-    const WEATHER_CITY = "Chennai";
+    const WEATHER_API_KEY = CONFIG.WEATHER_API_KEY;
+    const WEATHER_CITY = CONFIG.WEATHER_CITY;
     
     // Global weather data for predictions (initialized later in Weather Functions)
 
