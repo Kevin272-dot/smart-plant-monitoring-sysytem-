@@ -168,11 +168,12 @@ python simulator.py random
 
 ### Viewing the Dashboard
 
-Open `dashboard/index.html` in a web browser, or serve it:
+- Hosted (Vercel): https://smartplantmonitoringsystem.vercel.app/
+- Local: open `docs/index.html` in a browser, or serve it:
 
 ```bash
 # Using Python
-python -m http.server 8000 --directory dashboard
+python -m http.server 8000 --directory docs
 
 # Then open http://localhost:8000
 ```
