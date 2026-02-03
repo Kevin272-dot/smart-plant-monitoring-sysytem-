@@ -688,17 +688,17 @@
     // ═══════════════════════════════════════════════════════════════════
     // SUPABASE CLIENT
     // ═══════════════════════════════════════════════════════════════════
-    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_URL = _CONFIG.SUPABASE_URL;
     // Using secret key to bypass RLS for dashboard reads
-    const SUPABASE_KEY = CONFIG.SUPABASE_SECRET_KEY;
+    const SUPABASE_KEY = _CONFIG.SUPABASE_SECRET_KEY;
     
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // ═══════════════════════════════════════════════════════════════════
     // OPENWEATHERMAP CONFIG
     // ═══════════════════════════════════════════════════════════════════
-    const WEATHER_API_KEY = CONFIG.WEATHER_API_KEY;
-    const WEATHER_CITY = CONFIG.WEATHER_CITY;
+    const WEATHER_API_KEY = _CONFIG.WEATHER_API_KEY;
+    const WEATHER_CITY = _CONFIG.WEATHER_CITY;
     
     // Global weather data for predictions (initialized later in Weather Functions)
 
@@ -1285,6 +1285,112 @@
           }
         }
       });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // LOCAL ALERT DETECTION (Client-side)
+    // ═══════════════════════════════════════════════════════════════════
+    const ALERT_THRESHOLDS = {
+      soil_dry: 1800,      // Below = too dry
+      soil_wet: 2600,      // Above = too wet
+      temp_high: 35,       // Above = too hot
+      temp_low: 15,        // Below = too cold
+      light_low: 500,      // Below = insufficient light
+      humidity_high: 85,   // Above = fungal risk
+      humidity_low: 35,    // Below = too dry air
+    };
+
+    function detectLocalAlerts(readings) {
+      const alerts = [];
+      const recentReadings = readings.slice(-20); // Check last 20 readings
+      
+      recentReadings.forEach(reading => {
+        const timestamp = reading.timestamp;
+        
+        // Soil moisture checks
+        if (reading.soil < ALERT_THRESHOLDS.soil_dry) {
+          alerts.push({
+            type: "soil_dry",
+            severity: reading.soil < ALERT_THRESHOLDS.soil_dry - 200 ? "critical" : "warning",
+            message: "🚨 Soil too dry — water your plant!",
+            triggered_at: timestamp,
+            value: reading.soil
+          });
+        } else if (reading.soil > ALERT_THRESHOLDS.soil_wet) {
+          alerts.push({
+            type: "soil_wet",
+            severity: "warning",
+            message: "💦 Soil too wet — reduce watering.",
+            triggered_at: timestamp,
+            value: reading.soil
+          });
+        }
+
+        // Temperature checks
+        if (reading.temp > ALERT_THRESHOLDS.temp_high) {
+          alerts.push({
+            type: "temp_high",
+            severity: reading.temp > 40 ? "critical" : "warning",
+            message: "🔥 High temperature detected!",
+            triggered_at: timestamp,
+            value: reading.temp
+          });
+        } else if (reading.temp < ALERT_THRESHOLDS.temp_low) {
+          alerts.push({
+            type: "temp_low",
+            severity: reading.temp < 10 ? "critical" : "warning",
+            message: "❄️ Low temperature detected!",
+            triggered_at: timestamp,
+            value: reading.temp
+          });
+        }
+
+        // Light checks
+        if (reading.light < ALERT_THRESHOLDS.light_low) {
+          alerts.push({
+            type: "light_low",
+            severity: "info",
+            message: "🌑 Low light — move plant to brighter spot.",
+            triggered_at: timestamp,
+            value: reading.light
+          });
+        }
+
+        // Humidity checks
+        if (reading.humidity > ALERT_THRESHOLDS.humidity_high) {
+          alerts.push({
+            type: "humidity_high",
+            severity: "warning",
+            message: "🌫️ High humidity — watch for fungal diseases!",
+            triggered_at: timestamp,
+            value: reading.humidity
+          });
+        } else if (reading.humidity < ALERT_THRESHOLDS.humidity_low) {
+          alerts.push({
+            type: "humidity_low",
+            severity: "info",
+            message: "🏜️ Low humidity — consider misting.",
+            triggered_at: timestamp,
+            value: reading.humidity
+          });
+        }
+      });
+
+      // Remove duplicates by type (keep only most recent of each type)
+      const uniqueAlerts = [];
+      const seenTypes = new Set();
+      
+      // Sort by timestamp descending (most recent first)
+      alerts.sort((a, b) => new Date(b.triggered_at) - new Date(a.triggered_at));
+      
+      for (const alert of alerts) {
+        if (!seenTypes.has(alert.type)) {
+          seenTypes.add(alert.type);
+          uniqueAlerts.push(alert);
+        }
+      }
+      
+      return uniqueAlerts;
     }
 
     // ═══════════════════════════════════════════════════════════════════

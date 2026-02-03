@@ -26,9 +26,10 @@ from enum import Enum
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://yhgyeaygmampbvfanumx.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")  # Set via environment variable
 API_ENDPOINT = f"{SUPABASE_URL}/rest/v1/readings"
+ALERTS_ENDPOINT = f"{SUPABASE_URL}/rest/v1/alerts"
 
 # Simulation settings
-INTERVAL_SECONDS = 15
+INTERVAL_SECONDS = 30
 MAX_RETRIES = 3
 RETRY_DELAY = 5
 
@@ -127,6 +128,48 @@ class SensorSimulator:
             "temp": round(random.uniform(self.thresholds.temp_min, self.thresholds.temp_max), 1),
             "humidity": round(random.uniform(self.thresholds.humidity_min, self.thresholds.humidity_max), 1)
         }
+    
+    def generate_alert_reading(self) -> Dict[str, Any]:
+        """Generate a reading that will trigger alerts - randomly picks an alert type"""
+        alert_types = [
+            "soil_dry",
+            "soil_wet", 
+            "temp_high",
+            "temp_low",
+            "light_low",
+            "humidity_high",
+            "humidity_low"
+        ]
+        
+        chosen_alert = random.choice(alert_types)
+        
+        # Start with normal values
+        reading = {
+            "soil": random.randint(20000, 24000),
+            "light": random.randint(1000, 1500),
+            "temp": round(random.uniform(26, 30), 1),
+            "humidity": round(random.uniform(50, 70), 1)
+        }
+        
+        # Override with alert-triggering value
+        if chosen_alert == "soil_dry":
+            reading["soil"] = random.randint(1000, 1700)  # Below 1800 threshold
+        elif chosen_alert == "soil_wet":
+            reading["soil"] = random.randint(2700, 3500)  # Above 2600 threshold
+        elif chosen_alert == "temp_high":
+            reading["temp"] = round(random.uniform(36, 42), 1)  # Above 35 threshold
+        elif chosen_alert == "temp_low":
+            reading["temp"] = round(random.uniform(8, 14), 1)  # Below 15 threshold
+        elif chosen_alert == "light_low":
+            reading["light"] = random.randint(100, 450)  # Below 500 threshold
+        elif chosen_alert == "humidity_high":
+            reading["humidity"] = round(random.uniform(86, 95), 1)  # Above 85 threshold
+        elif chosen_alert == "humidity_low":
+            reading["humidity"] = round(random.uniform(20, 34), 1)  # Below 35 threshold
+        
+        print(f"  ⚡ ALERT TEST: Triggering '{chosen_alert}' alert!")
+        reading["_alert_type"] = chosen_alert  # Store alert type for later use
+        return reading
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -173,6 +216,32 @@ class SupabaseClient:
                 time.sleep(RETRY_DELAY)
         
         return False
+    
+    def send_alert(self, alert_type: str, data: Dict[str, Any]) -> bool:
+        """Send alert to Supabase alerts table"""
+        # The alerts table only has: id, type, triggered_at
+        alert_data = {
+            "type": alert_type
+        }
+        
+        try:
+            response = requests.post(
+                ALERTS_ENDPOINT,
+                headers=self.headers,
+                json=alert_data,
+                timeout=10
+            )
+            
+            if response.status_code in (200, 201):
+                print(f"  📝 Alert '{alert_type}' saved to database!")
+                return True
+            else:
+                print(f"  ⚠️  Failed to save alert: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"  ❌ Error saving alert: {e}")
+            return False
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -254,11 +323,25 @@ def main():
     try:
         while True:
             reading_count += 1
-            data = simulator.generate_reading()
+            alert_type = None
+            
+            # Every 10th reading, generate an alert-triggering reading
+            if reading_count % 10 == 0:
+                print("\n" + "="*50)
+                print("  🚨 ALERT TEST READING (every 10th reading)")
+                print("="*50)
+                data = simulator.generate_alert_reading()
+                alert_type = data.pop("_alert_type", None)  # Extract and remove alert type
+            else:
+                data = simulator.generate_reading()
+            
             success = client.send_reading(data)
             
             if success:
                 success_count += 1
+                # If this was an alert reading, save the alert to database
+                if alert_type:
+                    client.send_alert(alert_type, data)
             
             print_reading(data, success, reading_count)
             print(f"  {get_health_status(data)}")
