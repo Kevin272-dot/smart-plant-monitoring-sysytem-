@@ -11,8 +11,7 @@ node_modules/
 dashboard/config.js
 p1.txt
 *.txt
- .config.js
- docs/.config.js
+docs/config.js
 
 # IDE
 .vscode/
